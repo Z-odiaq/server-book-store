@@ -1,18 +1,16 @@
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
 const cors = require('cors');
-
 const mongoose = require('mongoose');
-
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bookstore';
 
 try {
-   mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+  mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
   console.log("Connected to DB.");
 } catch (e) {
   console.log("Failed to initiate mongo.");
@@ -27,13 +25,17 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
-app.use('/api', require('./routes/books'));
-app.use('/api', require('./routes/users'));
-app.use('/api', require('./routes/coupons'));
-app.use('/api', require('./routes/comments'));
-app.use('/api', require('./routes/likes'));
-app.use('/api', require('./routes/orders'));
+// Import your routes
+const booksRouter = require('./routes/books');
+const usersRouter = require('./routes/users');
+const couponsRouter = require('./routes/coupons');
+const ordersRouter = require('./routes/orders');
 
+// Use your routes
+app.use('/api/', booksRouter);
+app.use('/api/', usersRouter);
+app.use('/api/', couponsRouter);
+app.use('/api/', ordersRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

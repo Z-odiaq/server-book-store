@@ -56,15 +56,8 @@ const bookSchema = new Schema({
     description: {
         type: String,
         required: false
-    },
-    comments: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Comment'
-    }],
-    likes: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Like'
-    }]
+    }
+
 
 
 },
