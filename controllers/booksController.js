@@ -2,14 +2,15 @@ const Book = require('../models/Book');
 const User = require('../models/User');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+require('dotenv').config();
 
 const mongoose = require("mongoose");
 
 
 cloudinary.config({
   cloud_name: 'dfxpnludz',
-  api_key: '918177626788132',
-  api_secret: 'ru9snk5wFZtzPlFm71kqg0r7g1U'
+  api_key: process.env.CLOUDINARY_KEY ,
+  api_secret: process.env.CLOUDINARY_SECRET
 });
 
 
