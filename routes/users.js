@@ -15,13 +15,7 @@ router.get('/users', userController.getAllUsers);
 router.get('/users/:id', userController.getUserById);
 
 // Read favorites of a specific user
-router.get('/users/favorites', userController.getUserFavorites);
 
-// Add to favorites
-router.post('/users/favorites', userController.addToFavorites);
-
-// Remove from favorites
-router.delete('/users/:id/favorites/:favoritesId', userController.removeFromFavorites);
 
 // Read purchased items of a specific user
 router.get('/users/:id/purchased', userController.getUserPurchasedItems);

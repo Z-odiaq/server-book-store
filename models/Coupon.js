@@ -26,9 +26,18 @@ const couponSchema = new Schema({
     type: Number,
     required: true,
     default: 1
+  },
+  users: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   }
-  
-});
+
+
+}, { timestamps: true });
 
 const Coupon = mongoose.model('Coupon', couponSchema);
 

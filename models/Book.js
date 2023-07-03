@@ -41,8 +41,8 @@ const bookSchema = new Schema({
         required: false,
         default: 0
     },
-    published: {
-        type: Date,
+    PDFLink: {
+        type: String,
         required: false
     },
     language: {
