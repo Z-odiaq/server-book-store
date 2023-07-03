@@ -83,65 +83,8 @@ exports.getUserById = (req, res) => {
     });
 };
 
-// Read favorites of a specific user
-exports.getUserFavorites = (req, res) => {
-  const userId = req.params.id;
-
-  User.findById(userId).populate('favorites')
-    .then(user => {
-      if (user) {
-        res.json(user.favorites);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    })
-    .catch(error => {
-      res.status(500).json({ error: 'Failed to retrieve favorites' });
-    });
-};
-
-// Add to favorites
-exports.addToFavorites = (req, res) => {
 
 
-  const { bookId, userId } = req.body;
-  console.log("bookid", req.body);
-  User.findById(userId)
-    .then(user => {
-      const bid = new mongoose.mongo.ObjectId(bookId);
-      console.log("user", user, "bid", bid);
-      if (user.favorites.includes(bid)) {
-        user.favorites.pull(bid);
-        user.save();
-        return res.status(200).json({ message: 'Book pulled' });
-      }
-      user.favorites.push(bid);
-      user.save();
-      return res.status(200).json({ message: 'Book added' });
-    })
-    .catch(error => {
-      console.log(error);
-      res.status(500).json({ error: 'Failed to add to favorites' });
-    });
-};
-
-// Remove from favorites
-exports.removeFromFavorites = (req, res) => {
-  const userId = req.params.id;
-  const favoritesId = req.params.favoritesId;
-
-  User.findById(userId)
-    .then(user => {
-      user.favorites.pull(favoritesId);
-      return user.save();
-    })
-    .then(user => {
-      res.json(user);
-    })
-    .catch(error => {
-      res.status(500).json({ error: 'Failed to remove from favorites' });
-    });
-};
 
 // Read purchased items of a specific user
 exports.getUserPurchasedItems = (req, res) => {
