@@ -20,4 +20,7 @@ router.put('/orders/:id', orderController.updateOrder);
 // Delete an order
 router.delete('/orders/:id', orderController.deleteOrder);
 
+//router to test sendmail
+router.post('/sendmail', orderController.sendCouponCodeEmail);
+
 module.exports = router;

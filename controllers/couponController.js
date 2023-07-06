@@ -51,94 +51,67 @@ exports.getCouponById = (req, res) => {
 };
 
 // Read a specific coupon by code
-exports.getCouponByCode = (req, res) => {
-  const couponCode = req.params.code;
-console.log('checking', couponCode);
-
- Coupon.find({ code: couponCode }).then(coupon => {
-    if (coupon[0]) {
-      coupon = coupon[0];
-      //check if coupon is expired
-      if (coupon.expiryDate < Date.now()) {
-        res.status(404).json({ error: 'Coupon is expired' });
-        return;
-      }
-      //check if coupon is used up
-      if (coupon.currentUses >= coupon.maxUses) {
-        res.status(404).json({ error: 'Coupon is used up' });
-        return;
-      }
-      //check if coupon is valid
-      if (coupon.discountPercentage > 100 || coupon.discountPercentage < 0) {
-        res.status(404).json({ error: 'Coupon is invalid' });
-        return;
-      }
-      console.log(coupon.discountPercentage);
-      res.json({percentage : coupon.discountPercentage, expiryDate: coupon.expiryDate });
-    } else {
-      res.status(404).json({ error: 'Coupon not found' });
-    }
-  })
-    .catch(error => {
-      console.log(error);
-      res.status(500).json({  error });
-    });
-    
-};
 
 // Update a coupon
 exports.updateCoupon = (req, res) => {
   const couponId = req.params.id;
-  const { code, discountPercentage, expiryDate, currentUses, maxUses } = req.body;
+  const  newCoupon  = req.body;
 
-  Coupon.findByIdAndUpdate(couponId, { code, discountPercentage, expiryDate, currentUses, maxUses }, { new: true })
-    .then(updatedCoupon => {
-      if (updatedCoupon) {
-        res.json(updatedCoupon);
+  Coupon.findByIdAndUpdate(couponId, newCoupon, { new: true })
+    .then(coupon => {
+      if (coupon) {
+        res.json(coupon);
       } else {
         res.status(404).json({ error: 'Coupon not found' });
       }
     })
     .catch(error => {
+      console.log(error);
       res.status(500).json({ error: 'Failed to update coupon' });
     });
 };
-//apply coupon 
-exports.applyCoupon = (req, res) => {
+
+
+//check coupon 
+exports.checkCoupon = (req, res) => {
   const couponCode = req.params.code;
-  const { totalPrice } = req.body;
 
   Coupon.find({ code: couponCode }).then(coupon => {
     if (coupon) {
       //check if coupon is expired
-      if (coupon.expiryDate < Date.now()) {
-        res.status(404).json({ error: 'Coupon is expired' });
+      if (coupon[0].expiryDate < Date.now()) {
+        return res.status(404).json({ error: 'Coupon is expired' });
+      } else if (coupon[0].currentUses >= coupon[0].maxUses) {
+        return res.status(404).json({ error: 'Coupon is used up' });
+      } else if (coupon[0].discountPercentage > 100 || coupon[0].discountPercentage < 0) {
+        return res.status(404).json({ error: 'Coupon is invalid' });
+      } else {
+        console.log(coupon[0]);
+        //if coupon is valid
+        return res.json(coupon[0]);
       }
-      //check if coupon is used up
-      if (coupon.currentUses >= coupon.maxUses) {
-        res.status(404).json({ error: 'Coupon is used up' });
-      }
-      //check if coupon is valid
-      if (coupon.discountPercentage > 100 || coupon.discountPercentage < 0) {
-        res.status(404).json({ error: 'Coupon is invalid' });
-      }
-      //apply coupon
-      const discount = totalPrice * (coupon.discountPercentage / 100);
-      const newTotalPrice = totalPrice - discount;
-      //update coupon uses
-      coupon.currentUses++;
-      coupon.save();
-      res.json(newTotalPrice);
+
+    }
+  }).catch(error => {
+    console.log(error);
+    res.status(500).json({ error: 'Failed to retrieve coupon' });
+  });
+
+};
+
+//get coupon by code
+exports.getCouponByCode = (req, res) => {
+  const couponCode = req.params.code;
+  Coupon.find({ code: couponCode }).then(coupon => {
+    if (coupon) {
+      res.json(coupon);
     } else {
       res.status(404).json({ error: 'Coupon not found' });
     }
-  })
-    .catch(error => {
-      res.status(500).json({ error: 'Failed to retrieve coupon' });
-    });
-    
+  }).catch(error => {
+    res.status(500).json({ error: 'Failed to retrieve coupon' });
+  });
 };
-
 
 // Delete a coupon
 exports.deleteCoupon = (req, res) => {

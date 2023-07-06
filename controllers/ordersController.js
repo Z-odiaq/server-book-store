@@ -16,7 +16,8 @@ const transporter = nodemailer.createTransport({
 async function sendCouponCodeEmail(userEmail, coupon) {
   try {
     // Compose the email message
-    console.log(process.env.MAILER_PASSWORD);
+   // console.log(process.env.MAILER_PASSWORD);
+   console.log(userEmail, coupon.expiryDate);
     const mailOptions = {
       from: process.env.MAILER_EMAIL_ID,
       to: userEmail,
@@ -88,9 +89,9 @@ async function sendCouponCodeEmail(userEmail, coupon) {
             <p>Dear valued customer,</p>
             <p>As a token of our appreciation, we are pleased to offer you a special discount coupon:</p>
             <div class="coupon">
-              <p class="coupon-code">Coupon Code: ${coupon.Code}</p>
+              <p class="coupon-code">Coupon Code: ${coupon.code}</p>
               <p class="coupon-details">Discount: ${coupon.percentage}% off your next purchase</p>
-              <p class="coupon-details">Expiration Date: ${coupon.Code.split[T]}</p>
+              <p class="coupon-details">Expiration Date: ${coupon.expiryDate.toString().split('T')[0]}</p>
             </div>
             <p>Visit our website or store to redeem this coupon and enjoy great savings on our products.</p>
             <p>Thank you for being a loyal customer!</p>
@@ -109,11 +110,26 @@ async function sendCouponCodeEmail(userEmail, coupon) {
   }
 }
 
+//test sendCouponCodeEmail
+exports.sendCouponCodeEmail = async (req, res) => {
+  try {
+    const coupon = {
+      code: '123456',
+      percentage: 10,
+      expiryDate: '2021-12-31T00:00:00.000+00:00',
+    };
+    await sendCouponCodeEmail(req.body.email, coupon);
+    res.status(200).json({ message: 'Email sent successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 // Create an order and update book sold
 exports.createOrder = async (req, res) => {
   try {
-    const { books, total, returnedReason, couponCode, cardNumber, expiryDate, cvv, cardholderName } = req.body;
+    const {user, email, books, returnedReason, couponCode, cardNumber, expiryDate, cvv, cardholderName } = req.body;
 
     // Check if the quantity of each book is still available
     for (const book of books) {
@@ -124,34 +140,27 @@ exports.createOrder = async (req, res) => {
     }
 
     // Calculate the original total
-    let originalTotal = 0;
+    let Total = 0;
     for (const book of books) {
       const bookData = await Book.findById(book._id);
-      originalTotal += bookData.price * book.quantity;
+      Total += bookData.price * book.quantity;
     }
 
     // Check if the coupon code is valid
-    let calculatedTotal = total;
     if (couponCode) {
       const coupon = await Coupon.findOne({ code: couponCode });
       if (coupon) {
-        calculatedTotal = total - (total * coupon.discountPercentage / 100);
+        Total = Total - (Total * coupon.discountPercentage / 100);
       } else {
         return res.status(400).json({ error: 'Invalid coupon code' });
       }
     }
 
-    if (calculatedTotal !== originalTotal) {
-      console.log("total is not equal to original total", calculatedTotal, originalTotal);
-      return res.status(400).json({ error: 'Invalid coupon code' });
-    }
-
-
-
     const order = new Order({
-      user: req.body.id,
+      user:user,
       books: books,
-      total: total,
+      email: email,
+      total: Total,
       number: Math.floor(Math.random() * 1000000000),
       returnedReason: returnedReason,
       status: "Validated",
@@ -172,32 +181,38 @@ exports.createOrder = async (req, res) => {
       await bookData.save();
     }
 
-
-    if (total > 100) {
-      //create coupon and send it by email
-      const coupon = new Coupon({
-        code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        discountPercentage: 10,
-        expiryDate: new Date().setDate(new Date().getDate() + 30),
-        user: req.body.id
-      });
-      const savedCoupon = await coupon.save().then((coupon) => {
-        sendCouponCodeEmail(req.body.email, coupon);
-      });
-    }
-    if (total > 200) {
-      //create coupon and send it by email
+    if (Total > 200) {
+      //create coupon and send it by email if achat>200
       const coupon = new Coupon({
         code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
         discountPercentage: 15,
         expiryDate: new Date().setDate(new Date().getDate() + 30),
-        user: req.body.id
+        users: [user]
       });
-      const savedCoupon = await coupon.save().then((coupon) => {
-        sendCouponCodeEmail(req.body.email, coupon);
+      coupon.save().then((coupon) => {
+        sendCouponCodeEmail(email, coupon);
+        return res.status(201).json(savedOrder);
       });
+      return;
     }
-    res.status(201).json(savedOrder);
+    
+    if (Total > 100) {
+      //create coupon and send it by email if achat>100
+      const coupon = new Coupon({
+        code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+        discountPercentage: 10,
+        expiryDate: new Date().setDate(new Date().getDate() + 30),
+        users: [user]
+      });
+      coupon.save().then((coupon) => {
+        sendCouponCodeEmail(email, coupon);
+        return res.status(201).json(savedOrder);
+      });
+      return;
+    }
+
+
+    return res.status(201).json(savedOrder);
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: 'Failed to create order' });
@@ -250,12 +265,12 @@ exports.getOrderById = (req, res) => {
 // Update an order
 exports.updateOrder = (req, res) => {
   const orderId = req.params.id;
-  const { quantity, totalPrice } = req.body;
+  const updatedOrder = req.body;
 
-  Order.findByIdAndUpdate(orderId, { quantity, totalPrice }, { new: true })
-    .then(updatedOrder => {
-      if (updatedOrder) {
-        res.json(updatedOrder);
+Order.findByIdAndUpdate(orderId, updatedOrder, { new: true })
+    .then(order => {
+      if (order) {  
+        res.json(order);
       } else {
         res.status(404).json({ error: 'Order not found' });
       }
@@ -264,6 +279,7 @@ exports.updateOrder = (req, res) => {
       res.status(500).json({ error: 'Failed to update order' });
     });
 };
+
 
 // Delete an order
 exports.deleteOrder = (req, res) => {

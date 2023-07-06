@@ -20,4 +20,7 @@ router.put('/coupons/:id', couponController.updateCoupon);
 // Delete a coupon
 router.delete('/coupons/:id', couponController.deleteCoupon);
 
+//apply coupon
+router.post('/coupons/check/:code', couponController.checkCoupon);
+
 module.exports = router;

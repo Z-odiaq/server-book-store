@@ -7,10 +7,10 @@ require('dotenv').config();
 const mongoose = require("mongoose");
 
 
-cloudinary.config({
-  cloud_name: 'dfxpnludz',
-  api_key: process.env.CLOUDINARY_KEY ,
-  api_secret: process.env.CLOUDINARY_SECRET
+cloudinary.config({ 
+  cloud_name: 'dfxpnludz', 
+  api_key: '918177626788132', 
+  api_secret: 'ru9snk5wFZtzPlFm71kqg0r7g1U' 
 });
 
 
@@ -40,6 +40,7 @@ exports.createBook = async (req, res) => {
   upload.fields([{ name: 'coverPic', maxCount: 1 }, { name: 'pdfVersion', maxCount: 1 }])(req, res, async function (err) {
     if (err) {
       // Handle the error
+      console.log(err);
       res.status(500).json({ success: false, message: 'Failed to upload files' });
     } else {
       const uploadCover = req.files.coverPic[0];

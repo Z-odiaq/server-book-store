@@ -8,7 +8,7 @@ const orderSchema = new Schema({
         required: true
     },
     books: [{
-        book: {
+        _id: {
             type: Schema.Types.ObjectId,
             ref: 'Book',
             required: true
@@ -60,6 +60,10 @@ const orderSchema = new Schema({
         type: String,
         required: true
     },
+    email : {
+        type: String,
+        required: true
+    }
 
 
 },
