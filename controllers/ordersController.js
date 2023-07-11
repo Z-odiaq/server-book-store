@@ -3,6 +3,7 @@ const Book = require('../models/Book');
 const Coupon = require('../models/Coupon');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.sk_test);
 
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
@@ -12,6 +13,63 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+async function sendOrderConfirmationEmail(userEmail, items, total) {
+  try {
+    // Compose the email message
+    console.log("Items", items);
+    const mailOptions = {
+      from: process.env.MAILER_EMAIL_ID,
+      to: userEmail,
+      subject: 'Order Confirmation',
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Order Confirmation</title>
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+          </head>
+          <body>
+            <div class="container">
+              <h1>Order Confirmation</h1>
+              <p>Dear valued customer,</p>
+              <p>Thank you for your order. Here are the details:</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Author</th>
+                    <th>Genre</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map((item) => `
+                    <tr>
+                      <td>${item.title}</td>
+                      <td>${item.author}</td>
+                      <td>${item.genre}</td>
+                      <td>${item.price}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              </br>
+              <p>Total: ${total}</p>
+              <p>Thank you for your purchase!</p>
+              <p class="footer">Best regards, <br>Your Company</p>
+            </div>
+          </body>
+        </html>
+      `,
+    };
+
+    // Send the email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.response);
+  } catch (error) {
+    console.error('Error sending email:', error);
+  }
+}
 
 async function sendCouponCodeEmail(userEmail, coupon) {
   try {
@@ -90,8 +148,8 @@ async function sendCouponCodeEmail(userEmail, coupon) {
             <p>As a token of our appreciation, we are pleased to offer you a special discount coupon:</p>
             <div class="coupon">
               <p class="coupon-code">Coupon Code: ${coupon.code}</p>
-              <p class="coupon-details">Discount: ${coupon.percentage}% off your next purchase</p>
-              <p class="coupon-details">Expiration Date: ${coupon.expiryDate.toString().split('T')[0]}</p>
+              <p class="coupon-details">Discount: ${coupon.discountPercentage}% off your next purchase</p>
+              <p class="coupon-details">Expiration Date: ${new Date(coupon.expiryDate).toLocaleDateString()}</p>
             </div>
             <p>Visit our website or store to redeem this coupon and enjoy great savings on our products.</p>
             <p>Thank you for being a loyal customer!</p>
@@ -101,8 +159,6 @@ async function sendCouponCodeEmail(userEmail, coupon) {
       </html>`,
 
     };
-
-    // Send the email
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.response);
   } catch (error) {
@@ -110,40 +166,23 @@ async function sendCouponCodeEmail(userEmail, coupon) {
   }
 }
 
-//test sendCouponCodeEmail
-exports.sendCouponCodeEmail = async (req, res) => {
-  try {
-    const coupon = {
-      code: '123456',
-      percentage: 10,
-      expiryDate: '2021-12-31T00:00:00.000+00:00',
-    };
-    await sendCouponCodeEmail(req.body.email, coupon);
-    res.status(200).json({ message: 'Email sent successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 
 // Create an order and update book sold
 exports.createOrder = async (req, res) => {
   try {
     const {user, email, books, returnedReason, couponCode, cardNumber, expiryDate, cvv, cardholderName } = req.body;
-
+    let Total = 0;
     // Check if the quantity of each book is still available
+    PurchasedBooks = [];
     for (const book of books) {
       const bookData = await Book.findById(book._id);
       if (bookData.quantity < book.quantity) {
         return res.status(400).json({ error: 'The quantity of the book is not available' });
+      }else{
+        PurchasedBooks.push(bookData);
+        Total += bookData.price * book.quantity;
       }
-    }
-
-    // Calculate the original total
-    let Total = 0;
-    for (const book of books) {
-      const bookData = await Book.findById(book._id);
-      Total += bookData.price * book.quantity;
     }
 
     // Check if the coupon code is valid
@@ -181,35 +220,20 @@ exports.createOrder = async (req, res) => {
       await bookData.save();
     }
 
-    if (Total > 200) {
+    if (Total > 200 || Total > 100) {
       //create coupon and send it by email if achat>200
       const coupon = new Coupon({
         code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        discountPercentage: 15,
+        discountPercentage: Total>200?15:10,
         expiryDate: new Date().setDate(new Date().getDate() + 30),
         users: [user]
       });
       coupon.save().then((coupon) => {
         sendCouponCodeEmail(email, coupon);
-        return res.status(201).json(savedOrder);
       });
-      return;
     }
-    
-    if (Total > 100) {
-      //create coupon and send it by email if achat>100
-      const coupon = new Coupon({
-        code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        discountPercentage: 10,
-        expiryDate: new Date().setDate(new Date().getDate() + 30),
-        users: [user]
-      });
-      coupon.save().then((coupon) => {
-        sendCouponCodeEmail(email, coupon);
-        return res.status(201).json(savedOrder);
-      });
-      return;
-    }
+
+    sendOrderConfirmationEmail(email, PurchasedBooks, Total);
 
 
     return res.status(201).json(savedOrder);

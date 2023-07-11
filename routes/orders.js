@@ -21,6 +21,5 @@ router.put('/orders/:id', orderController.updateOrder);
 router.delete('/orders/:id', orderController.deleteOrder);
 
 //router to test sendmail
-router.post('/sendmail', orderController.sendCouponCodeEmail);
 
 module.exports = router;

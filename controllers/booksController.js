@@ -140,8 +140,8 @@ exports.getTopRatedBooks = (req, res) => {
 
 // Read favorites of a specific user
 exports.getUserFavorites = (req, res) => {
-  const userId = req.params.id;
-
+  const userId = req.params.userId;
+console.log("user id", userId);
   User.findById(userId).populate('favorites')
     .then(user => {
       if (user) {
@@ -157,14 +157,12 @@ exports.getUserFavorites = (req, res) => {
 
 // Add to favorites
 exports.addToFavorites = (req, res) => { //book
-
-
   const { bookId, userId } = req.body;
   console.log("bookid", req.body);
   User.findById(userId)
     .then(user => {
-      const bid = new mongoose.mongo.ObjectId(bookId);
-      console.log("user", user, "bid", bid);
+      bid = new mongoose.mongo.ObjectId(bookId);
+      console.log("user", user.favorites, "bid", bid);
       if (user.favorites.includes(bid)) {
         user.favorites.pull(bid);
         user.save();
@@ -184,7 +182,7 @@ exports.addToFavorites = (req, res) => { //book
 // Read purchased books by user
 exports.getPurchasedBooksByUser = (req, res) => {
   const userId = req.params.userId;
-
+console.log("user id", userId);
   User.findById(userId).populate('purchasedBooks')
     .then(user => {
       if (user) {
@@ -194,6 +192,7 @@ exports.getPurchasedBooksByUser = (req, res) => {
       }
     })
     .catch(error => {
+      console.log(error);
       res.status(500).json({ error: 'Failed to retrieve user' });
     });
 };

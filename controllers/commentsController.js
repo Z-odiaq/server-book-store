@@ -1,13 +1,13 @@
 const Comment = require('../models/Comment');
-
+const mongoose = require('mongoose');
 // Create a comment
 exports.createComment = (req, res) => {
   const { bookId, userId, text } = req.body;
-
+console.log(req.body);
   const comment = new Comment({
-    book : bookId,
-    user : userId,
-    test : text
+    book : new mongoose.mongo.ObjectId(bookId),
+    user : new mongoose.mongo.ObjectId(userId),
+    text : text
   });
 
   comment.save()
@@ -15,6 +15,7 @@ exports.createComment = (req, res) => {
       res.status(201).json(savedComment);
     })
     .catch(error => {
+      console.log(error);
       res.status(500).json({ error: 'Failed to create comment' });
     });
 };
@@ -34,7 +35,7 @@ exports.getAllComments = (req, res) => {
 exports.getCommentsByBook = (req, res) => {
   const bookId = req.params.bookId;
 
-  Comment.find({ book : bookId }).populate('user' , 'firstName lastName' )
+  Comment.find({ book : new mongoose.mongo.ObjectId(bookId) }).populate('user')
     .then(comments => {
       res.json(comments);
     })

@@ -30,12 +30,15 @@ const booksRouter = require('./routes/books');
 const usersRouter = require('./routes/users');
 const couponsRouter = require('./routes/coupons');
 const ordersRouter = require('./routes/orders');
-
+const commentsRouter = require('./routes/comments');
+const likesRouter = require('./routes/likes');
 // Use your routes
 app.use('/api/', booksRouter);
 app.use('/api/', usersRouter);
 app.use('/api/', couponsRouter);
 app.use('/api/', ordersRouter);
+app.use('/api/', commentsRouter);
+app.use('/api/', likesRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
