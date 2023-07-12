@@ -7,10 +7,10 @@ require('dotenv').config();
 const mongoose = require("mongoose");
 
 
-cloudinary.config({ 
-  cloud_name: 'dfxpnludz', 
-  api_key: '918177626788132', 
-  api_secret: 'ru9snk5wFZtzPlFm71kqg0r7g1U' 
+cloudinary.config({
+  cloud_name: 'dfxpnludz',
+  api_key: '918177626788132',
+  api_secret: 'ru9snk5wFZtzPlFm71kqg0r7g1U'
 });
 
 
@@ -141,7 +141,7 @@ exports.getTopRatedBooks = (req, res) => {
 // Read favorites of a specific user
 exports.getUserFavorites = (req, res) => {
   const userId = req.params.userId;
-console.log("user id", userId);
+  console.log("user id", userId);
   User.findById(userId).populate('favorites')
     .then(user => {
       if (user) {
@@ -182,7 +182,7 @@ exports.addToFavorites = (req, res) => { //book
 // Read purchased books by user
 exports.getPurchasedBooksByUser = (req, res) => {
   const userId = req.params.userId;
-console.log("user id", userId);
+  console.log("user id", userId);
   User.findById(userId).populate('purchasedBooks')
     .then(user => {
       if (user) {
@@ -216,20 +216,62 @@ exports.getBookById = (req, res) => {
 
 // Update a book
 exports.updateBook = (req, res) => {
-  const bookId = req.params.id;
-  const { title, author, price, cover, pages, published, language, genre, rating, description } = req.body;
 
-  Book.findByIdAndUpdate(bookId, { title, author, price, cover, pages, published, language, genre, rating, description }, { new: true })
-    .then(updatedBook => {
-      if (updatedBook) {
-        res.json(updatedBook);
-      } else {
-        res.status(404).json({ error: 'Book not found' });
+
+  upload.fields([{ name: 'coverPic', maxCount: 1 }, { name: 'pdfVersion', maxCount: 1 }])(req, res, async function (err) {
+    if (err) {
+      // Handle the error
+      console.log(err);
+      res.status(500).json({ success: false, message: 'Failed to upload files' });
+    } else {
+
+
+      var PDFLinkUp = req.files && req.files.pdfVersion && req.files.pdfVersion[0];
+      PDFLinkUp = PDFLinkUp ?? null;
+
+      var coverUp = req.files && req.files.coverPic && req.files.coverPic[0];
+      coverUp = coverUp ?? null;
+
+
+      try {
+
+        const cover = coverUp ? await cloudinary.uploader.upload(coverUp.path, {
+          folder: 'images',
+        }) : null;
+
+        const PDFLink = PDFLinkUp ? await cloudinary.uploader.upload(PDFLinkUp.path, {
+          folder: 'pdfs',
+        }) : null;
+
+        console.log("cover", cover);
+
+        const bookId = req.params.id;
+        const { title, author, price, pages, published, language, genre, rating, description } = req.body;
+
+        Book.findByIdAndUpdate(bookId, {
+          title, author, price,
+          cover: cover?.secure_url,
+          PDFLink: PDFLink?.secure_url,
+          pages, published, language, genre, rating, description
+        }, { new: true })
+          .then(updatedBook => {
+            if (updatedBook) {
+              res.json(updatedBook);
+            } else {
+              res.status(404).json({ error: 'Book not found' });
+            }
+          })
+          .catch(error => {
+            console.log("error: ", error);
+
+            res.status(500).json({ error: 'Failed to update book' });
+          });
+      } catch (error) {
+        console.log(error);
+        res.status(500).json({ success: false, message: 'Failed to upload files' });
       }
-    })
-    .catch(error => {
-      res.status(500).json({ error: 'Failed to update book' });
-    });
+    }
+  });
 };
 
 // Delete a book
@@ -282,7 +324,7 @@ exports.searchBooks = async (req, res) => {
 //search by provided filters
 exports.searchByFilters = async (req, res) => {
   try {
-    const { title, author, genre, language  } = req.query;
+    const { title, author, genre, language } = req.query;
 
     // Perform the search query
     const searchResults = await Book.find({
