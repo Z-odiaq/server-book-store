@@ -12,7 +12,7 @@ const couponSchema = new Schema({
     required: true,
     min: 0,
     max: 100
-  },
+  }, 
   expiryDate: {
     type: Date,
     required: true

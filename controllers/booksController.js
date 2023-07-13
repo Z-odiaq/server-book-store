@@ -3,7 +3,7 @@ const User = require('../models/User');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 require('dotenv').config();
-
+const Order = require('../models/Order');
 const mongoose = require("mongoose");
 
 
@@ -180,20 +180,22 @@ exports.addToFavorites = (req, res) => { //book
 
 
 // Read purchased books by user
+//get list of purchased books by user
 exports.getPurchasedBooksByUser = (req, res) => {
   const userId = req.params.userId;
-  console.log("user id", userId);
-  User.findById(userId).populate('purchasedBooks')
-    .then(user => {
-      if (user) {
-        res.json(user.purchasedBooks);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
+
+  Order.find({ user: userId }).populate('books')
+    .then(orders => {
+      let books = [];
+      orders.forEach(order => {
+        order.books.forEach(book => {
+          books.push(book);
+        });
+      });
+      res.json(books);
     })
     .catch(error => {
-      console.log(error);
-      res.status(500).json({ error: 'Failed to retrieve user' });
+      res.status(500).json({ error: 'Failed to retrieve books' });
     });
 };
 

@@ -30,7 +30,6 @@ const bookSchema = new Schema({
     },
     cover: {
         type: String,
-        required: true
     },
     pages: {
         type: Number,

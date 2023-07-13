@@ -4,7 +4,7 @@ const Coupon = require('../models/Coupon');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.sk_test);
-
+const PaymentToken = require('../models/paymentToken');
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
@@ -74,8 +74,8 @@ async function sendOrderConfirmationEmail(userEmail, items, total) {
 async function sendCouponCodeEmail(userEmail, coupon) {
   try {
     // Compose the email message
-   // console.log(process.env.MAILER_PASSWORD);
-   console.log(userEmail, coupon.expiryDate);
+    // console.log(process.env.MAILER_PASSWORD);
+    console.log(userEmail, coupon.expiryDate);
     const mailOptions = {
       from: process.env.MAILER_EMAIL_ID,
       to: userEmail,
@@ -171,52 +171,70 @@ async function sendCouponCodeEmail(userEmail, coupon) {
 // Create an order and update book sold
 exports.createOrder = async (req, res) => {
   try {
-    const {user, email, books, returnedReason, couponCode, cardNumber, expiryDate, cvv, cardholderName } = req.body;
+    console.log(req.body);
+    const { user, email, books, couponCode, paymentToken } = req.body;
     let Total = 0;
-    // Check if the quantity of each book is still available
+
     PurchasedBooks = [];
-    for (const book of books) {
-      const bookData = await Book.findById(book._id);
-      if (bookData.quantity < book.quantity) {
-        return res.status(400).json({ error: 'The quantity of the book is not available' });
-      }else{
+    for (const id of books) {
+      const bookData = await Book.findById(id);
         PurchasedBooks.push(bookData);
-        Total += bookData.price * book.quantity;
-      }
+        Total += bookData.price ;
     }
 
-    // Check if the coupon code is valid
+    // Check if the coupon code is validd
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode });
+      const coupon = await Coupon.findById(couponCode);
       if (coupon) {
+        if (coupon.expiryDate < Date.now()) {
+          return res.status(400).json({ error: 'Coupon code has expired' });
+        }else if (coupon.currentUses >= coupon.maxUses) {
+          return res.status(400).json({ error: 'Coupon code has expired' });
+        }
         Total = Total - (Total * coupon.discountPercentage / 100);
+        coupon.currentUses += 1;
+        await coupon.save();
+
       } else {
         return res.status(400).json({ error: 'Invalid coupon code' });
       }
     }
+    const token = new PaymentToken({
+      id: paymentToken.id,
+      cardId: paymentToken.card.id,
+      brand: paymentToken.card.brand,
+      country: paymentToken.card.country,
+      expMonth: paymentToken.card.exp_month,
+      expYear: paymentToken.card.exp_year,
+      last4: paymentToken.card.last4,
+      name: paymentToken.card.name,
+      clientIp: paymentToken.client_ip,
+      created: paymentToken.created,
+      email: paymentToken.email,
+      livemode: paymentToken.livemode,
+      type: paymentToken.type,
+      used: paymentToken.used
+    });
+    const newToken = await token.save();
 
     const order = new Order({
-      user:user,
+      user: user,
       books: books,
       email: email,
       total: Total,
       number: Math.floor(Math.random() * 1000000000),
-      returnedReason: returnedReason,
       status: "Validated",
       couponCode: couponCode,
-      cardNumber: cardNumber,
-      expiryDate: expiryDate,
-      cvv: cvv,
-      cardholderName: cardholderName
+      paymentToken: newToken._id,
     });
-
     const savedOrder = await order.save();
+
 
     // Update book sold
     for (const book of savedOrder.books) {
       const bookData = await Book.findById(book._id);
-      bookData.sold += book.quantity;
-      bookData.quantity -= book.quantity;
+      bookData.sold ++;
+
       await bookData.save();
     }
 
@@ -224,7 +242,7 @@ exports.createOrder = async (req, res) => {
       //create coupon and send it by email if achat>200
       const coupon = new Coupon({
         code: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        discountPercentage: Total>200?15:10,
+        discountPercentage: Total > 200 ? 15 : 10,
         expiryDate: new Date().setDate(new Date().getDate() + 30),
         users: [user]
       });
@@ -247,7 +265,7 @@ exports.createOrder = async (req, res) => {
 
 // Read all orders
 exports.getAllOrders = (req, res) => {
-  Order.find()
+  Order.find().populate('books')
     .then(orders => {
       res.json(orders);
     })
@@ -259,12 +277,13 @@ exports.getAllOrders = (req, res) => {
 // Read orders for a specific user
 exports.getOrdersByUser = (req, res) => {
   const userId = req.params.userId;
-
-  Order.find({ user: userId })
+console.log(userId);
+  Order.find({ user: userId }).populate('books').populate('couponCode')
     .then(orders => {
       res.json(orders);
     })
     .catch(error => {
+      console.log(error);
       res.status(500).json({ error: 'Failed to retrieve orders' });
     });
 };
@@ -291,9 +310,9 @@ exports.updateOrder = (req, res) => {
   const orderId = req.params.id;
   const updatedOrder = req.body;
 
-Order.findByIdAndUpdate(orderId, updatedOrder, { new: true })
+  Order.findByIdAndUpdate(orderId, updatedOrder, { new: true })
     .then(order => {
-      if (order) {  
+      if (order) {
         res.json(order);
       } else {
         res.status(404).json({ error: 'Order not found' });
@@ -303,6 +322,7 @@ Order.findByIdAndUpdate(orderId, updatedOrder, { new: true })
       res.status(500).json({ error: 'Failed to update order' });
     });
 };
+
 
 
 // Delete an order

@@ -101,17 +101,29 @@ exports.checkCoupon = (req, res) => {
 
 //get coupon by code
 exports.getCouponByCode = (req, res) => {
+  console.log(req.params.code);
   const couponCode = req.params.code;
-  Coupon.find({ code: couponCode }).then(coupon => {
-    if (coupon) {
-      res.json(coupon);
-    } else {
-      res.status(404).json({ error: 'Coupon not found' });
-    }
-  }).catch(error => {
-    res.status(500).json({ error: 'Failed to retrieve coupon' });
-  });
+  Coupon.findOne({ code: couponCode })
+    .then(coupon => {
+      if (coupon) {
+        if (coupon.expiryDate < Date.now()) {
+          return res.status(404).json({ error: 'Coupon is expired' });
+        } else if (coupon.currentUses >= coupon.maxUses) {
+          return res.status(404).json({ error: 'Coupon is used up' });
+        } else if (coupon.discountPercentage > 100 || coupon.discountPercentage < 0) {
+          return res.status(404).json({ error: 'Coupon is invalid' });
+        } 
+        return res.json(coupon);
+      } else {
+        return res.status(404).json({ error: 'Coupon not found' });
+      }
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(500).json({ error: 'Failed to retrieve coupon' });
+    });
 };
+
 
 // Delete a coupon
 exports.deleteCoupon = (req, res) => {

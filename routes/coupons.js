@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const couponController = require('../controllers/couponController');
-
+// Read a specific coupon by code
+router.get('/coupons/code/:code', couponController.getCouponByCode);
 // Create a coupon
 router.post('/coupons', couponController.createCoupon);
 
@@ -11,8 +12,7 @@ router.get('/coupons', couponController.getAllCoupons);
 // Read a specific coupon by ID
 router.get('/coupons/:id', couponController.getCouponById);
 
-// Read a specific coupon by code
-router.get('/coupons/code/:code', couponController.getCouponByCode);
+
 
 // Update a coupon
 router.put('/coupons/:id', couponController.updateCoupon);

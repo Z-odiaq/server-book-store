@@ -8,59 +8,44 @@ const orderSchema = new Schema({
         required: true
     },
     books: [{
-        _id: {
-            type: Schema.Types.ObjectId,
-            ref: 'Book',
-            required: true
-        },
-        quantity: {
-            type: Number,
-            required: true
-        }
-    }],
+        type: Schema.Types.ObjectId,
+        ref: 'Book',
+        required: true
+      }],
     total: {
         type: Number,
         required: true
     },
-    number : {
+    number: {
         type: String,
         required: true
     },
-    returnedDate : {
+    returnedDate: {
         type: Date,
         required: false
     },
-    returnedReason : {
+    returnedReason: {
         type: String,
         required: false
     },
-    
+
     status: {
         type: String,
         required: true,
         default: 'pending'
     },
-    couponCode : {
-        type: String,
+    couponCode: {
+        type: Schema.Types.ObjectId,
+        ref: 'Coupon',
         required: false
     },
-    cardNumber : {
-        type: String,
+    paymentToken: {
+        type: Schema.Types.ObjectId,
+        ref: 'paymentToken',
         required: true
     },
-    expiryDate : {
-        type: String,
-        required: true
-    },
-    cvv : {
-        type: String,
-        required: true
-    },
-    cardholderName : {
-        type: String,
-        required: true
-    },
-    email : {
+
+    email: {
         type: String,
         required: true
     }
