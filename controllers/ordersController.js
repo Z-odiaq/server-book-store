@@ -322,9 +322,6 @@ exports.updateOrder = (req, res) => {
       res.status(500).json({ error: 'Failed to update order' });
     });
 };
-
-
-
 // Delete an order
 exports.deleteOrder = (req, res) => {
   const orderId = req.params.id;
