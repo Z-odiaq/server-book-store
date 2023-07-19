@@ -286,6 +286,8 @@ exports.deleteBook = (req, res) => {
         //delete the book from the users favorites
         User.updateMany({}, { $pull: { favorites: bookId } })
           .then(() => {
+            //delete the book from users favorites
+            User.updateMany({}, { $pull: { favorites: bookId, likedBooks: bookId } })
             res.json({ message: 'Book deleted successfully' });
           })
           .catch(error => {

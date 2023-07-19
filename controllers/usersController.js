@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 // User registration
 exports.registerUser = async (req, res) => {
   try {
-    const { email, password, firstname, lastname } = req.body;
+    const { email, password, firstname, lastname, role } = req.body;
 
     // Check if the user with the same email already exists
     const existingUser = await User.findOne({ email });
@@ -17,12 +17,13 @@ exports.registerUser = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create a new user
-    const user = new User({ email, passwordHash, firstname, lastname });
+    const user = new User({ email, passwordHash, firstname, lastname, role });
 
     // Save the user to the database
     const savedUser = await user.save();
+    const token = jwt.sign({ userId: savedUser._id }, 'secret_key');
 
-    res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({ token, user });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: 'Failed to register user' });
