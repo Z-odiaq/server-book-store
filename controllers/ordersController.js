@@ -265,7 +265,7 @@ exports.createOrder = async (req, res) => {
 
 // Read all orders
 exports.getAllOrders = (req, res) => {
-  Order.find().populate('books')
+  Order.find().populate('books').populate('user', 'email')
     .then(orders => {
       res.json(orders);
     })
