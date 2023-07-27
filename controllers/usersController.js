@@ -12,18 +12,15 @@ exports.registerUser = async (req, res) => {
     if (existingUser) {
       return res.status(409).json({ error: 'Email already exists' });
     }
-
     // Hash the password
     const passwordHash = await bcrypt.hash(password, 10);
-
     // Create a new user
     const user = new User({ email, passwordHash, firstname, lastname, role });
-
     // Save the user to the database
     const savedUser = await user.save();
     const token = jwt.sign({ userId: savedUser._id }, 'secret_key');
-
     res.status(201).json({ token, user });
+
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: 'Failed to register user' });
@@ -58,7 +55,7 @@ exports.loginUser = async (req, res) => {
 
 // Read all users
 exports.getAllUsers = (req, res) => {
-  User.find()
+  User.find().select('-passwordHash')
     .then(users => {
       res.json(users);
     })
@@ -161,9 +158,9 @@ exports.updateUserCart = (req, res) => {
 // Update a user
 exports.updateUser = (req, res) => {
   const userId = req.params.id;
-  const { username, email, password } = req.body;
+  const updatedFields = req.body;
 
-  User.findByIdAndUpdate(userId, { username, email, password }, { new: true })
+  User.findByIdAndUpdate(userId, updatedFields, { new: true })
     .then(updatedUser => {
       if (updatedUser) {
         res.json(updatedUser);
@@ -175,7 +172,6 @@ exports.updateUser = (req, res) => {
       res.status(500).json({ error: 'Failed to update user' });
     });
 };
-
 // Delete a user
 exports.deleteUser = (req, res) => {
   const userId = req.params.id;
